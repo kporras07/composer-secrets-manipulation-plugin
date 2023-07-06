@@ -8,6 +8,8 @@ use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginEvents;
 use Composer\EventDispatcher\Event;
+use Composer\Util\Platform;
+use Composer\Config;
 
 class SecretsManipulationPlugin implements PluginInterface, EventSubscriberInterface
 {
@@ -24,7 +26,12 @@ class SecretsManipulationPlugin implements PluginInterface, EventSubscriberInter
     /**
      * @var array
      */
-    private $config;
+    private $packageConfig;
+
+    /**
+     * @var Composer\Config
+     */
+    private $composerConfig;
 
     /**
      * {@inheritdoc}
@@ -34,7 +41,9 @@ class SecretsManipulationPlugin implements PluginInterface, EventSubscriberInter
         $this->composer = $composer;
         $this->io = $io;
 
-        $this->config = $composer->getPackage()->getExtra()['composer-secrets-manipulation-plugin'] ?? [];
+        $this->composerConfig = $composer->getConfig();
+
+        $this->packageConfig = $composer->getPackage()->getExtra()['composer-secrets-manipulation-plugin'] ?? [];
     }
 
     /**
@@ -70,7 +79,28 @@ class SecretsManipulationPlugin implements PluginInterface, EventSubscriberInter
         foreach ($envVarsMapping as $envVar => $newEnvVar) {
             $this->io->write(sprintf('Setting env var %s to %s', $newEnvVar, $envVar));
             $value = getenv($envVar);
-            putenv(sprintf('%s=%s', $newEnvVar, $value));
+            Platform::putEnv($newEnvVar, $value);
+            if ($newEnvVar == "COMPOSER_AUTH") {
+                $this->handleComposerAuth();
+            }
+        }
+    }
+
+    protected function handleComposerAuth() {
+        if ($composerAuthEnv = Platform::getEnv('COMPOSER_AUTH')) {
+            $authData = json_decode($composerAuthEnv);
+            if (null === $authData) {
+                throw new \UnexpectedValueException('COMPOSER_AUTH environment variable is malformed, should be a valid JSON object');
+            } else {
+                if ($this->io instanceof IOInterface) {
+                    $this->io->writeError('Loading auth config from COMPOSER_AUTH', true, IOInterface::DEBUG);
+                }
+                $authData = json_decode($composerAuthEnv, true);
+                if (null !== $authData) {
+                    $this->composerConfig->merge(['config' => $authData], 'COMPOSER_AUTH');
+                    $this->composer->setConfig($this->composerConfig);
+                }
+            }
         }
     }
 
@@ -80,8 +110,8 @@ class SecretsManipulationPlugin implements PluginInterface, EventSubscriberInter
     public function getEnvVarsMapping()
     {
         $mapping = [];
-        if (isset($this->config['envVarsMapping'])) {
-            $mapping = $this->config['envVarsMapping'];
+        if (isset($this->packageConfig['envVarsMapping'])) {
+            $mapping = $this->packageConfig['envVarsMapping'];
         }
         return $mapping;
     }
