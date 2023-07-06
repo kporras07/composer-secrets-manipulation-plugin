@@ -1,7 +1,7 @@
-Composer Disable Plugin
+Composer Secrets Manipulation Plugin
 ========================
 
-Allows you to completely disable event listers for some composer plugins under certain conditions.
+Allows you to manipulate pantheon secrets to customize some secrets behavior during IC runs.
 
 ## Configuration
 

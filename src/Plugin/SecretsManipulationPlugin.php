@@ -75,7 +75,7 @@ class SecretsManipulationPlugin implements PluginInterface, EventSubscriberInter
     }
 
     /**
-     * Get a list of packages to disable.
+     * Get env vars mapping array.
      */
     public function getEnvVarsMapping()
     {
