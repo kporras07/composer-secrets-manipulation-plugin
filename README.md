@@ -10,11 +10,9 @@ In your composer.json `extra` section:
 ```
 "extra": {
     "composer-secrets-manipulation-plugin": {
-        "envVarsMapping": [
-            {
-                "upstreamEnvVarName": "siteEnvVarName"
-            }
-        ]
+        "envVarsMapping": {
+            "upstreamEnvVarName": "siteEnvVarName"
+        }
     }
 }
 ```
